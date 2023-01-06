@@ -12,6 +12,7 @@ import params
 from lief import ELF
 from log import LogFormatter
 from build_fixer import BuildFixer
+from rich.prompt import Prompt
 
 class ELFHandler:
     
@@ -28,7 +29,7 @@ class ELFHandler:
             if self.elf.has_section('.symtab') or self.elf.has_section('.strtab'):
                 self.is_stripped = False
                 logging.error('ELF file doesn\'t seem to be stripped. Continuing execution may produce a corrupted ELF file.')
-                usr_run_unstripped = input('\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.WARNING])+'m'+LogFormatter.FORMAT_PREFIXES[logging.WARNING]+'Continue anyway ? (y/N): ').strip()
+                usr_run_unstripped = Prompt.ask('[magenta] Continue anyway ?').strip()
                 if not usr_run_unstripped.lower().startswith('y'):
                     sys.exit(1)
             self.elf_arch = self.elf.header.machine_type
@@ -50,8 +51,7 @@ class ELFHandler:
                 logging.error('Unsupported architecture detected in ELF header.')
                 sys.exit(1)
         else:
-            logging.error('ELF file \033[0;'+str(LogFormatter.LOG_COLORS['WHITE'])+'m'+
-                elf_path+'\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.ERROR])+'m doesn\'t exist.')
+            logging.error(f'ELF file [white]{elf_path}[magenta] doesn\'t exist.')
             sys.exit(1)
 
     def check_architecture_installation(self, architecture):
@@ -60,11 +60,9 @@ class ELFHandler:
         for installed_line in installed_list:
             if architecture in installed_line:
                 if 'installed' not in installed_line:
-                    logging.info('Architecture \033[0;'+str(LogFormatter.LOG_COLORS['WHITE'])+'m'+architecture+'\033[0;'+
-                        str(LogFormatter.FORMAT_COLORS[logging.INFO])+'m doesn\'t seem to be installed.')
-                    usr_install_arch = input('\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.INFO])+'m'+
-                        LogFormatter.FORMAT_PREFIXES[logging.INFO]+'Install architecture ? (Y/n): ').strip()
-                    if not usr_install_arch.lower().startswith('n'):
+                    logging.info('Architecture [white]'+architecture+'[cyan] doesn\'t seem to be installed.')
+                    usr_install_arch = Prompt.ask('[cyan]Install architecture ?')
+                    if usr_install_arch:
                         logging.info('Proceeding to installation...')
                         try:
                             subprocess.run(['rustup','target','install',architecture], capture_output=True)
@@ -74,7 +72,7 @@ class ELFHandler:
                 break
 
     def download_and_build_crates(self, session_dir):
-        logging.info('Downloading '+str(len(self.crates))+' crates...')
+        logging.info(f'Downloading {len(self.crates)} crates...')
         for crate_name in self.crates:
             crate_version = self.crates[crate_name]
             crate_url = 'https://crates.io/api/v1/crates/'+crate_name+'/'+crate_version+'/download'
@@ -137,8 +135,7 @@ class ELFHandler:
                     build_output = subprocess.run(build_params, cwd=session_dir+'/'+crate_dir, capture_output=True)
                     built_crates_ctr += 1
                 except Exception as e:
-                    logging.error('An error occured when building crate \033[0;'+
-                        str(LogFormatter.LOG_COLORS['WHITE'])+'m'+crate_dir)
+                    logging.error(f'An error occured when building crate [white]{crate_dir}')
                     logging.debug(e)
                     continue
                 build_err = build_output.stderr
@@ -149,17 +146,16 @@ class ELFHandler:
                         if err_line.decode().strip().startswith('error: '):
                             is_error = True
                     if is_error:
-                        logging.error('An error occured when building crate \033[0;'+
-                            str(LogFormatter.LOG_COLORS['WHITE'])+'m'+crate_dir)
+                        logging.error(f'An error occured when building crate [white]{crate_dir}')
                         logging.debug('Here is the trace :')
                         if logging.getLogger(__name__).getEffectiveLevel() <= logging.DEBUG:
                             for err_line in build_err:
-                                print('\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.DEBUG])+'m'+err_line.decode())
+                                print('[bright blue]'+err_line.decode())
                         logging.info('Delegating to BuildFixer...')
                         build_fixer = BuildFixer(session_dir+'/'+crate_dir, build_err, self.elf_arch)
                         if not build_fixer.success:
                             built_crates_ctr -= 1
-            logging.success('Done ! ('+str(built_crates_ctr)+'/'+str(len(self.crates))+')')
+            logging.success(f'Done ! ({built_crates_ctr}/{len(self.crates)})')
             return True
         else:
             logging.fatal('Error when using cargo command !')

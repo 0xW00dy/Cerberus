@@ -51,8 +51,7 @@ def add_workspace_patch(crate_path):
 
 class BuildFixer:
 
-    PREFIX = '\033[1;'+str(LogFormatter.LOG_COLORS['BRIGHT_BLUE'])+'mBuildFixer'+'\033[0;'+\
-        str(LogFormatter.LOG_COLORS['BRIGHT_BLUE'])+'m -> '
+    PREFIX = '[bright blue]BuildFixer -> '
 
     TRACE_TO_PATCH = {
         'maybe a missing crate `core`?': ['EDITION 2021', newer_edition_patch],
@@ -67,7 +66,7 @@ class BuildFixer:
         self.crate_path = crate_path
         self.elf_arch = elf_arch
         self.compute_error(build_err, 0)
-    
+
     def compute_error(self, build_err, iter_index):
         found_patch = False
         for err_line in build_err:
@@ -78,24 +77,23 @@ class BuildFixer:
                     if patch_name not in self.applied_patches:
                         found_patch = True
                         self.applied_patches[patch_name] = iter_index
-                        logging.info(self.PREFIX+'\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.INFO])+'mApplying patch : '+
-                            '\033[1;'+str(LogFormatter.LOG_COLORS['BRIGHT_WHITE'])+'m'+patch_name)
+                        logging.info(f'{self.PREFIX}[cyan]]Applying patch : [bright white] {patch_name}')
                         patch_func(self.crate_path)
                     else:
                         patch_iter_index = self.applied_patches[patch_name]
                         if iter_index != patch_iter_index:
-                            logging.error(self.PREFIX+'\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.ERROR])+'mPatch recursion detected...')
+                            logging.error(f'{self.PREFIX}[red]Patch recursion detected...')
                             return
-        if not found_patch:
-            logging.error(self.PREFIX+'\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.ERROR])+'mNo patch was found...')
+                        if not found_patch:
+                            logging.error(f'{self.PREFIX}[red]No patch was found...')
             return
-        logging.info(self.PREFIX+'\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.INFO])+'mBuilding crate again...')
+        logging.info(f'{self.PREFIX}[cyan]Building crate again...')
         build_status, new_build_err = self.build_crate()
         if build_status:
             self.success = True
-            logging.success(self.PREFIX+'\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.SUCCESS])+'mSuccess !')
+            logging.success(f'{self.PREFIX}[green]Success !')
         else:
-            logging.info(self.PREFIX+'\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.INFO])+'mTrying to patch new error trace...')
+            logging.info(f'{self.PREFIX}[cyan]Trying to patch new error trace...')
             self.compute_error(new_build_err, iter_index+1)
 
     def build_crate(self):
@@ -105,7 +103,7 @@ class BuildFixer:
         try:
             build_output = subprocess.run(build_params, cwd=self.crate_path, capture_output=True)
         except Exception as e:
-            logging.error(self.PREFIX+'\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.ERROR])+'mBuild failed...')
+            logging.error(f'{self.PREFIX}[red]]Build failed...')
             logging.debug(e)
             return [False, None]
         build_err = build_output.stderr
@@ -116,10 +114,10 @@ class BuildFixer:
                 if err_line.decode().strip().startswith('error: '):
                     is_error = True
             if is_error:
-                logging.error(self.PREFIX+'\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.ERROR])+'mBuild failed...')
-                logging.debug(self.PREFIX+'\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.ERROR])+'mHere is the trace :')
+                logging.error(f'{self.PREFIX}[red]Build failed...')
+                logging.debug(f'{self.PREFIX}[red]Here is the trace :')
                 if logging.getLogger(__name__).getEffectiveLevel() <= logging.DEBUG:
                     for err_line in build_err:
-                        print('\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.DEBUG])+'m'+err_line.decode())
+                        print('[bright blue]'+err_line.decode())
                 return [False, build_err]
         return [True, None]

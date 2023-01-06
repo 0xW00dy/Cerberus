@@ -6,8 +6,11 @@ import argparse
 import params
 from uuid import uuid4
 from elf_handler import ELFHandler
-from log import LogFormatter
+#from log import LogFormatter
 from rich import print
+from rich.prompt import Prompt, Confirm
+from rich.logging import RichHandler
+
 
 TOOL_TITLE = "   ___         _       \n\
   / __|___ _ _| |__  ___ _ _ _  _ ___\n\
@@ -17,14 +20,18 @@ VERSION = '1.1'
 AUTHOR = 'h311d1n3r'
 
 def init_logging():
-    fmt = LogFormatter()
-    hdlr = logging.StreamHandler(sys.stdout)
-    hdlr.setFormatter(fmt)
-    logging.root.addHandler(hdlr)
+    FORMAT = "\[x] %(message)s"
     if params.DEBUG:
-        logging.root.setLevel(logging.DEBUG)
+        logging.basicConfig(
+            level="DEBUG", format=FORMAT, handlers=[RichHandler()]
+        )
+
     else:
-        logging.root.setLevel(logging.INFO)
+        logging.basicConfig(
+            level="NOTSET", format=FORMAT, handlers=[RichHandler(show_time=False, show_level=False, markup=True)]
+        )
+    logging.addLevelName(logging.SUCCESS, '[+]')
+    setattr(logging, 'success', lambda message, *args: logging.root._log(logging.SUCCESS, message, args))
 
 def print_help_message():
     print(f'[cyan] {TOOL_TITLE} ')
@@ -45,33 +52,29 @@ def print_help_message():
 
 def manage_crates(elf_handler):
     if len(elf_handler.crates) > 0:
-            logging.info('The following crates were found :')
+            logging.info('[cyan]The following crates were found :')
             for crate_name in elf_handler.crates:
                 crate_version = elf_handler.crates[crate_name]
-                logging.success('- '+crate_name+': '+'\033[0;'+str(LogFormatter.LOG_COLORS['BRIGHT_GREEN'])+'m'+
-                    'v'+crate_version)
+                logging.success(f'- {crate_name}: [bright green]v{crate_version}')
     else:
-        logging.warning('No crate was found in specified ELF file')
+        logging.warning('[red]No crate was found in specified ELF file')
     while True:
-        usr_more_crates = input('\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.INFO])+'m'+
-            LogFormatter.FORMAT_PREFIXES[logging.INFO]+'Add/Edit/Remove crate ? (y/N): ').strip()
-        if not usr_more_crates.lower().startswith('y'):
-            break
-        usr_crate_name = input('\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.INFO])+'m'+
-            LogFormatter.FORMAT_PREFIXES[logging.INFO]+'Crate name: ').strip()
-        usr_crate_version = input('\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.INFO])+'m'+
-            LogFormatter.FORMAT_PREFIXES[logging.INFO]+'Crate version (blank to remove): ').strip()
-        if usr_crate_name in elf_handler.crates and len(usr_crate_version) == 0:
-            del elf_handler.crates[usr_crate_name]
+        usr_more_crates = Confirm.ask('[cyan][*] Add/Edit/Remove crate ?')
+        if usr_more_crates:
+            usr_crate_name = Prompt.ask('[cyan][*] Crate name: ').strip()
+            usr_crate_version = Prompt.ask('[cyan][*] Crate version (blank to remove): ').strip()
+            if usr_crate_name in elf_handler.crates and len(usr_crate_version) == 0:
+                del elf_handler.crates[usr_crate_name]
+            else:
+                if usr_crate_version.startswith('v'):
+                    usr_crate_version = usr_crate_version[1:]
+                elf_handler.crates[usr_crate_name] = usr_crate_version
         else:
-            if usr_crate_version.startswith('v'):
-                usr_crate_version = usr_crate_version[1:]
-            elf_handler.crates[usr_crate_name] = usr_crate_version
+            break
         logging.info('Current crates list :')
         for crate_name in elf_handler.crates:
             crate_version = elf_handler.crates[crate_name]
-            logging.success('- '+crate_name+': \033[0;'+str(LogFormatter.LOG_COLORS['BRIGHT_GREEN'])+'m'+
-                'v'+crate_version)
+            logging.success(f'- {crate_name}: [bright green]v{crate_version}')
     if len(elf_handler.crates) >= 1:
         return True
     return False

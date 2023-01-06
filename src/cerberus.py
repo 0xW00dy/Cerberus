@@ -7,6 +7,7 @@ import params
 from uuid import uuid4
 from elf_handler import ELFHandler
 from log import LogFormatter
+from rich import print
 
 TOOL_TITLE = "   ___         _       \n\
   / __|___ _ _| |__  ___ _ _ _  _ ___\n\
@@ -26,31 +27,21 @@ def init_logging():
         logging.root.setLevel(logging.INFO)
 
 def print_help_message():
-    print('\033[0;'+str(LogFormatter.LOG_COLORS['CYAN'])+'m'+TOOL_TITLE)
-    print('\033[0;'+str(LogFormatter.LOG_COLORS['CYAN'])+'m Version: \033[1;'+
-        str(LogFormatter.LOG_COLORS['WHITE'])+'m'+VERSION)
-    print('\033[0;'+str(LogFormatter.LOG_COLORS['CYAN'])+'m Author: \033[1;'+
-        str(LogFormatter.LOG_COLORS['WHITE'])+'m'+AUTHOR)
-    print('\033[0;'+str(LogFormatter.LOG_COLORS['CYAN'])+'m_____________________________________\n')
-    print('\033[0;'+str(LogFormatter.LOG_COLORS['CYAN'])+'mSyntax: \033[1;'+
-        str(LogFormatter.LOG_COLORS['YELLOW'])+'mcerberus binary [-param value] [--flag]\n')
-    print('\033[0;'+str(LogFormatter.LOG_COLORS['CYAN'])+'mParameters:')
-    print('\033[1;'+str(LogFormatter.LOG_COLORS['YELLOW'])+'m   output\033[0;'+str(LogFormatter.LOG_COLORS['CYAN'])+'m'+
-        ' -> Specifies the path for the resulting ELF file. \033[1;'+str(LogFormatter.LOG_COLORS['CYAN'])+'m'+'Default value : [input_binary]-patched')
-    print('\033[1;'+str(LogFormatter.LOG_COLORS['YELLOW'])+'m   part_hash_len\033[0;'+str(LogFormatter.LOG_COLORS['CYAN'])+'m'+
-' -> Specifies the length of a part hash. The part hash of a function is just a reduction of the function with a linear pace.\
- This technique is used to prevent fixed addresses from corrupting a standard hash. \033[1;'+str(LogFormatter.LOG_COLORS['CYAN'])+'m'+'Default value : 20')
-    print('\033[1;'+str(LogFormatter.LOG_COLORS['YELLOW'])+'m   part_hash_trust\033[0;'+str(LogFormatter.LOG_COLORS['CYAN'])+'m'+
-' -> Specifies minimum ratio of similarity between the two hashed functions to compare. The kept function will be the one with the most matches anyway.\
- Increasing this value will reduce the number of matched functions but speed up execution time. \033[1;'+str(LogFormatter.LOG_COLORS['CYAN'])+'m'+'Default value : 0.6')
-    print('\033[1;'+str(LogFormatter.LOG_COLORS['YELLOW'])+'m   min_func_size\033[0;'+str(LogFormatter.LOG_COLORS['CYAN'])+'m'+
-        ' -> Specifies the minimum length a function must be to get analyzed. Decreasing this value will increase matches but also false positives. \033[1;'+
-        str(LogFormatter.LOG_COLORS['CYAN'])+'m'+'Default value : 10')
-    print('\033[0;'+str(LogFormatter.LOG_COLORS['CYAN'])+'m\nFlags:')
-    print('\033[1;'+str(LogFormatter.LOG_COLORS['YELLOW'])+'m   help\033[0;'+str(LogFormatter.LOG_COLORS['CYAN'])+'m'+
-        ' -> Displays this message.')
-    print('\033[1;'+str(LogFormatter.LOG_COLORS['YELLOW'])+'m   debug\033[0;'+str(LogFormatter.LOG_COLORS['CYAN'])+'m'+
-        ' -> Enable debug level of logging.')
+    print(f'[cyan] {TOOL_TITLE} ')
+    print(f'[cyan] Version: [/cyan][white]{VERSION}')
+    print(f'[cyan] Author: [/cyan][white]{AUTHOR}')
+    print('[cyan]_____________________________________\n')
+    print('[cyan]Syntax: [yellow]cerberus binary [-param value] [--flag]\n')
+    print('[cyan]Parameters:')
+    print('[yellow]   output[cyan] -> Specifies the path for the resulting ELF file. [cyan]Default value : \[input_binary]-patched')
+    print('[yellow]   part_hash_len[cyan] -> Specifies the length of a part hash. The part hash of a function is just a reduction of the function with a linear pace.\
+ This technique is used to prevent fixed addresses from corrupting a standard hash. [cyan]Default value : 20')
+    print('[yellow]   part_hash_trust[cyan] -> Specifies minimum ratio of similarity between the two hashed functions to compare. The kept function will be the one with the most matches anyway.\
+ Increasing this value will reduce the number of matched functions but speed up execution time. Default value : 0.6')
+    print('[yellow]   min_func_size[cyan] -> Specifies the minimum length a function must be to get analyzed. Decreasing this value will increase matches but also false positives. Default value : 10')
+    print('[cyan]\nFlags:')
+    print('[yellow]   help[cyan] -> Displays this message.')
+    print('[yellow]   debug[cyan] -> Enable debug level of logging.')
 
 def manage_crates(elf_handler):
     if len(elf_handler.crates) > 0:
@@ -120,8 +111,7 @@ if __name__ == '__main__':
                 elf_handler.gen_hashes(session_dir)
                 elf_handler.compare_hashes(session_dir)
                 elf_handler.patch_elf()
-                logging.success('End of execution. ELF file \033[0;'+str(LogFormatter.LOG_COLORS['WHITE'])+'m'+
-                    params.OUTPUT+'\033[0;'+str(LogFormatter.FORMAT_COLORS[logging.SUCCESS])+'m is your result.')
+                logging.success('End of execution. ELF file [white] {params.OUTPUT} [green] is your result.')
             shutil.rmtree(session_dir)
     else:
         print_help_message()
